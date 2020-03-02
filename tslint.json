@@ -27,6 +27,7 @@
     ],
     "interface-name": false,
     "max-classes-per-file": false,
+    "prefer-for-of": false,
     "max-line-length": [
       true,
       140
@@ -43,6 +44,7 @@
         ]
       }
     ],
+    "curly": false,
     "no-consecutive-blank-lines": false,
     "no-console": [
       true,
@@ -52,6 +54,7 @@
       "timeEnd",
       "trace"
     ],
+    "no-string-literal": false,
     "no-empty": false,
     "no-inferrable-types": [
       true,
