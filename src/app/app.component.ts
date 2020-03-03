@@ -4,14 +4,11 @@ import * as p5 from 'p5';
 import { fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
-type FFTData = M.Complex & {
-    freq: number;
-    radius: number;
-    phase: number;
-};
+import { DFTData } from './interfaces/dft-data';
+import { FourierService } from './services/fourier.service';
 
 let pf: ReturnType<AppComponent['parameterize']> = null;
-let coeffs: FFTData[] = [];
+let coeffs: DFTData[] = [];
 let pts: [number, number][] = null;
 let points = [];
 
@@ -31,7 +28,8 @@ export class AppComponent implements AfterViewInit {
     private p5: p5;
 
     constructor(
-        private cdr: ChangeDetectorRef
+        private cdr: ChangeDetectorRef,
+        private fourierService: FourierService
     ) { }
 
     public async loadSvg() {
@@ -51,7 +49,8 @@ export class AppComponent implements AfterViewInit {
         }
 
         const complexPts = pts.map(pt => this.ptToComplex(pt));
-        coeffs = await this.fft([...complexPts]);
+        console.log(complexPts);
+        coeffs = await this.fourierService.dft([...complexPts], this.m);
         // pf = this.parameterize([...coeffs]);
         this.reloading = false;
         this.cdr.detectChanges();
@@ -108,44 +107,6 @@ export class AppComponent implements AfterViewInit {
         return M.complex(`${pt[0]} + ${pt[1]}i`);
     }
 
-    // private async discreteFourierTransform(complexPts: M.Complex[]): Promise<M.Complex[]> {
-    //     const cf: M.Complex[] = [];
-    //     const n = complexPts.length;
-
-    //     for (let i = -this.m; i <= this.m; i++)
-    //         cf.push(M.multiply(1 / n,
-    //             await this.sigma(k => M.multiply(
-    //                 complexPts[k - 1],
-    //                 M.exp(M.multiply(M.complex('-1i'), i * k * 2 * M.pi / n) as M.Complex)
-    //             ), [1, n])) as M.Complex
-    //         );
-
-    //     return cf;
-    // }
-
-    private async fft(cps: M.Complex[]): Promise<FFTData[]> {
-        const X = [];
-        const N = cps.length;
-        for (let i = -this.m; i <= this.m; i++) {
-            let sum = M.complex('0');
-            for (let n = 0; n < N; n++) {
-                const xn = cps[n];
-                const theta = (2 * M.pi * i * n) / N;
-                const c = M.complex(`${M.cos(theta)}-${M.sin(theta)}i`);
-                sum = M.add(sum, M.multiply(xn, c)) as M.Complex;
-            }
-            const { re, im } = M.multiply(1 / N, sum) as M.Complex;
-            X.push({
-                re,
-                im,
-                freq: i,
-                radius: M.sqrt((re * re) + (im * im)),
-                phase: M.atan2(im, re)
-            });
-        }
-        return X;
-    }
-
     private parameterize(cn: M.Complex[]) {
         return async (t: number): Promise<M.Complex> => this.reloading
             ? M.complex('0')
@@ -185,7 +146,7 @@ export class AppComponent implements AfterViewInit {
             time += M.min((2 * M.pi) / pts.length, +this.vertexInterval);
         };
 
-        p.epicycles = (x: number, y: number, complex: FFTData[]) => {
+        p.epicycles = (x: number, y: number, complex: DFTData[]) => {
             for (let i = 0; i < complex.length; i++) {
                 const cn = complex[i];
                 const prevx = x;
