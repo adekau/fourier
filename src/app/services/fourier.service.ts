@@ -32,7 +32,26 @@ export class FourierService {
         return X;
     }
 
-    // public async fft(cps: M.Complex[], m: number): Promise<DFTData[]> {
+    public async fft(cps: M.Complex[]): Promise<DFTData[]> {
+        const s = [...cps];
+        let ceilPow2 = M.ceil(M.log2(s.length));
+        if (cps.length === 1)
+            return cps as DFTData[];
 
-    // }
+        while (M.pow(2, ceilPow2) as number - s.length) {
+            s.push(M.complex(0, 0));
+            ceilPow2 = M.ceil(M.log2(s.length));
+        }
+
+        const n = s.length;
+        const m = n / 2;
+        let evens = [];
+        let odds = [];
+        for (let i = 0; i < m; i++) {
+            evens[i] = s[2 * i];
+            odds[i] = s[2 * i + 1];
+        }
+        evens = await this.fft(evens);
+        odds = await this.fft(odds);
+    }
 }
