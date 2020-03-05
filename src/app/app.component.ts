@@ -50,8 +50,7 @@ export class AppComponent implements AfterViewInit {
 
         const complexPts = pts.map(pt => this.ptToComplex(pt));
         coeffs = await this.fourierService.dft([...complexPts], this.m);
-        console.log(coeffs);
-        console.log(await this.fourierService.fft(complexPts));
+        await this.fourierService.fft(complexPts);
         // pf = this.parameterize([...coeffs]);
         this.reloading = false;
         this.cdr.detectChanges();

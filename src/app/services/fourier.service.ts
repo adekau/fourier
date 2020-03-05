@@ -32,26 +32,30 @@ export class FourierService {
         return X;
     }
 
-    public async fft(cps: M.Complex[]): Promise<DFTData[]> {
+    public async fft(cps: M.Complex[]): Promise<void>/*Promise<DFTData[]>*/ {
         const s = [...cps];
-        let ceilPow2 = M.ceil(M.log2(s.length));
-        if (cps.length === 1)
-            return cps as DFTData[];
-
-        while (M.pow(2, ceilPow2) as number - s.length) {
+        const c = this.bitLength(cps.length - 1);
+        const N = 1 << c;
+        // Increase cps length to the next power of two.
+        while (s.length < N)
             s.push(M.complex(0, 0));
-            ceilPow2 = M.ceil(M.log2(s.length));
-        }
 
-        const n = s.length;
-        const m = n / 2;
-        let evens = [];
-        let odds = [];
-        for (let i = 0; i < m; i++) {
-            evens[i] = s[2 * i];
-            odds[i] = s[2 * i + 1];
+        const m = N / 2;
+
+        for (let blockLen = 2; blockLen <= N; blockLen *= 2) {
+            const phi = M.tau / blockLen;
+            // OmegaN using nth root of unity where n <= N.
+            const omegaN = M.complex(`${M.cos(phi)} - i${M.sin(phi)}`);
+
+            for (let startPos = 0; startPos < N; startPos += blockLen) {
+                console.log(startPos, omegaN);
+            }
         }
-        evens = await this.fft(evens);
-        odds = await this.fft(odds);
+    }
+
+    private bitLength(n: number): number {
+        let c: number = 0;
+        while ((1 << c) <= n) c++;
+        return c;
     }
 }
