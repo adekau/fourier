@@ -6,6 +6,7 @@ import { debounceTime } from 'rxjs/operators';
 
 import { DFTData } from './interfaces/dft-data';
 import { FourierService } from './services/fourier.service';
+import { ComplexNumber } from './services/complex-number';
 
 let pf: ReturnType<AppComponent['parameterize']> = null;
 let coeffs: DFTData[] = [];
@@ -49,8 +50,22 @@ export class AppComponent implements AfterViewInit {
         }
 
         const complexPts = pts.map(pt => this.ptToComplex(pt));
-        coeffs = await this.fourierService.dft([...complexPts], this.m);
-        await this.fourierService.fft(complexPts);
+        coeffs = await this.fourierService.dft([...complexPts], complexPts.length);
+        const testPts = [];
+        const testCPts = [];
+        for (let i = 0; i < 8; i++) {
+            const re = M.random(0, 100);
+            const im = M.random(0, 100);
+            testPts.push(M.complex(re, im));
+            testCPts.push(new ComplexNumber({ re, im }));
+        }
+
+        console.log(
+            await this.fourierService.dft([...testPts], testPts.length),
+            await this.fourierService.fft(testPts),
+            this.fourierService.fastFourierTransform([...testCPts])
+        );
+
         // pf = this.parameterize([...coeffs]);
         this.reloading = false;
         this.cdr.detectChanges();
