@@ -6,7 +6,6 @@ import { debounceTime } from 'rxjs/operators';
 
 import { DFTData } from './interfaces/dft-data';
 import { FourierService } from './services/fourier.service';
-import { ComplexNumber } from './services/complex-number';
 
 let pf: ReturnType<AppComponent['parameterize']> = null;
 let coeffs: DFTData[] = [];
@@ -21,10 +20,27 @@ let points = [];
 })
 export class AppComponent implements AfterViewInit {
     @ViewChild('canvas', { static: false }) private canvas: ElementRef;
-    public m = 30;
+    public samples = 1024;
     public scalingFactor = 2;
     public reloading = false;
-    public vertexInterval = 0.02;
+    public timeFactor = 1;
+    public svgUrl = './assets/llama.svg';
+    public examples = [
+        {
+            name: 'Llama',
+            url: './assets/llama.svg',
+            speed: 1,
+            samples: 1024,
+            scalingFactor: 3
+        },
+        {
+            name: 'Happy',
+            url: './assets/happy.svg',
+            speed: 2,
+            samples: 1024,
+            scalingFactor: 2
+        }
+    ];
 
     private p5: p5;
 
@@ -37,34 +53,19 @@ export class AppComponent implements AfterViewInit {
         this.reloading = true;
         this.reset();
 
-        const response = await fetch('./assets/llama.svg');
+        const response = await fetch(this.svgUrl);
         const text = await response.text();
 
-        if (!pts) {
-            pts = await this.sampleSvgPoints(text);
-            const center = M.mean([M.min(pts), M.max(pts)]);
-            pts = pts.map(([x, y]) => [
-                (x - center) * this.scalingFactor,
-                (y - center) * this.scalingFactor
-            ]);
-        }
+        pts = await this.sampleSvgPoints(text, this.samples);
+        const center = M.mean([M.min(pts), M.max(pts)]);
+        pts = pts.map(([x, y]) => [
+            (x - center) * this.scalingFactor,
+            (y - center) * this.scalingFactor
+        ]);
 
         const complexPts = pts.map(pt => this.ptToComplex(pt));
-        coeffs = await this.fourierService.dft([...complexPts], complexPts.length);
-        const testPts = [];
-        const testCPts = [];
-        for (let i = 0; i < 8; i++) {
-            const re = M.random(0, 100);
-            const im = M.random(0, 100);
-            testPts.push(M.complex(re, im));
-            testCPts.push(new ComplexNumber({ re, im }));
-        }
-
-        console.log(
-            await this.fourierService.dft([...testPts], testPts.length),
-            await this.fourierService.fft(testPts),
-            this.fourierService.fastFourierTransform([...testCPts])
-        );
+        coeffs = await this.fourierService.fft(complexPts);
+        console.log(coeffs);
 
         // pf = this.parameterize([...coeffs]);
         this.reloading = false;
@@ -97,19 +98,23 @@ export class AppComponent implements AfterViewInit {
         await this.loadSvg();
     }
 
-    private async sampleSvgPoints(xml: string): Promise<[number, number][]> {
+    private async sampleSvgPoints(xml: string, numPts: number): Promise<[number, number][]> {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xml, 'application/xml');
         let samplePts = [];
 
-        doc.querySelectorAll('path').forEach(path => {
+        const paths = Array.from(doc.querySelectorAll('path'));
+        const totalLength = paths.reduce((acc, v) => acc + v.getTotalLength(), 0);
+        const step = (totalLength / numPts) + 0.0001;
+        paths.forEach(path => {
             const sample = [];
             const n = M.floor(path.getTotalLength());
-            for (let i = 0; i < n; i += 1.5) {
+            for (let i = 0; i < n; i += step)
                 sample.push(this.toPt(path.getPointAtLength(i)));
-            }
             samplePts = samplePts.concat(sample);
         });
+        while (samplePts.length > numPts)
+            samplePts.pop();
 
         return samplePts;
     }
@@ -125,7 +130,8 @@ export class AppComponent implements AfterViewInit {
     private parameterize(cn: M.Complex[]) {
         return async (t: number): Promise<M.Complex> => this.reloading
             ? M.complex('0')
-            : await this.sigma(k => M.multiply(cn[k - 1], M.exp(M.multiply(M.i, (k - this.m - 1) * t))), [1, 2 * this.m + 1]) as M.Complex;
+            : await this.sigma(k =>
+                M.multiply(cn[k - 1], M.exp(M.multiply(M.i, (k - this.samples - 1) * t))), [1, 2 * this.samples + 1]) as M.Complex;
     }
 
     private async sigma(exp: (k: number) => M.MathType, interval: [number, number]): Promise<M.MathType> {
@@ -133,6 +139,15 @@ export class AppComponent implements AfterViewInit {
         for (let i = interval[0]; i <= interval[1]; i++)
             sum = M.add(sum, exp(i));
         return sum;
+    }
+
+    public loadExample(exampleName: string) {
+        const example = this.examples.find(e => e.name === exampleName);
+        this.svgUrl = example.url;
+        this.scalingFactor = example.scalingFactor;
+        this.samples = example.samples;
+        this.timeFactor = example.speed;
+        this.loadSvg();
     }
 
     private sketch(p: any) {
@@ -158,7 +173,7 @@ export class AppComponent implements AfterViewInit {
             if (time > M.pi * 2)
                 points.pop();
 
-            time += M.min((2 * M.pi) / pts.length, +this.vertexInterval);
+            time += ((2 * M.pi) / pts.length) * this.timeFactor;
         };
 
         p.epicycles = (x: number, y: number, complex: DFTData[]) => {

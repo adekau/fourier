@@ -9,12 +9,22 @@
             <span>Variables</span>
         </header>
         <label>
-            <span>M (# Circles = 2*M + 1):</span>
-            <input type="number" min="1" [(ngModel)]="m" (change)="loadSvg()">
+            <span>Point Samples (Make it a power of 2):</span>
+            <input type="number" min="1" [(ngModel)]="samples" (change)="loadSvg()">
+        </label>
+        <label>
+            <span>Speed:</span>
+            <input type="number" min="1" [(ngModel)]="timeFactor">
         </label>
         <label>
             <span>Scale</span>
             <input type="text" [(ngModel)]="scalingFactor" (change)="resetScale()">
         </label>
+
+        <section>
+            <span>Examples</span>
+        </section>
+
+        <input *ngFor="let example of examples" type="button" [value]="example.name" (click)="loadExample(example.name)">
     </div>
 </div>

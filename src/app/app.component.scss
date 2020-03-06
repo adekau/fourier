@@ -23,7 +23,7 @@
     box-sizing: border-box;
     border-left: 1px dashed rgb(150, 150, 150);
 
-    header {
+    header, section {
         height: 36px;
         display: flex;
         justify-content: center;
@@ -35,6 +35,11 @@
             font-size: 18px;
             color: rgb(220, 220, 220);
         }
+    }
+
+    section {
+        margin: 15px -10px;
+        border-top: 1px dashed rgb(150, 150, 150);
     }
 }
 
@@ -54,6 +59,10 @@ input {
         border: 1px solid rgb(200, 200, 200);
         border-radius: 3px;
     }
+}
+
+input[type='button'] {
+    margin: 7px 0;
 }
 
 label {
