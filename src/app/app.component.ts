@@ -29,7 +29,7 @@ export class AppComponent implements AfterViewInit {
         {
             name: 'Llama',
             url: './assets/llama.svg',
-            speed: 1,
+            speed: 2,
             samples: 1024,
             scalingFactor: 3
         },
@@ -92,10 +92,10 @@ export class AppComponent implements AfterViewInit {
         fromEvent(window, 'resize')
             .pipe(debounceTime(250))
             .subscribe({
-                next: () => this.loadSvg()
+                next: () => this.loadExample('Llama')
             });
 
-        await this.loadSvg();
+        await this.loadExample('Llama');
     }
 
     private async sampleSvgPoints(xml: string, numPts: number): Promise<[number, number][]> {
