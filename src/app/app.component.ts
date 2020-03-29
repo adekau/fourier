@@ -62,12 +62,9 @@ export class AppComponent implements AfterViewInit {
             (x - center) * this.scalingFactor,
             (y - center) * this.scalingFactor
         ]);
-
         const complexPts = pts.map(pt => this.ptToComplex(pt));
-        coeffs = await this.fourierService.fft(complexPts);
-        console.log(coeffs);
+        coeffs = await this.fourierService.dft(complexPts);
 
-        // pf = this.parameterize([...coeffs]);
         this.reloading = false;
         this.cdr.detectChanges();
         this.p5 = new p5(this.sketch.bind(this), this.canvas.nativeElement);
@@ -131,7 +128,7 @@ export class AppComponent implements AfterViewInit {
         return async (t: number): Promise<M.Complex> => this.reloading
             ? M.complex('0')
             : await this.sigma(k =>
-                M.multiply(cn[k - 1], M.exp(M.multiply(M.i, (k - this.samples - 1) * t))), [1, 2 * this.samples + 1]) as M.Complex;
+                M.multiply(M.complex(cn[k - 1].re, cn[k - 1].im), M.exp(M.multiply(M.i, (k - 1) * t))), [1, this.samples]) as M.Complex;
     }
 
     private async sigma(exp: (k: number) => M.MathType, interval: [number, number]): Promise<M.MathType> {
@@ -157,18 +154,32 @@ export class AppComponent implements AfterViewInit {
             p.frameRate(30);
         };
 
+        const z = this.parameterize(coeffs);
+
         p.draw = async () => {
             p.background(25);
-
-            const v = p.epicycles(p.width / 2, p.height / 2, coeffs.sort((a, b) =>
-                b.radius - a.radius));
-            points.unshift(v);
-
+            p.translate(300, 200);
+            const pt = await z(time);
+            console.log(await z(M.pi/4));
+            points.unshift(p.createVector(pt.re, pt.im));
             p.stroke(230);
+            p.noFill();
             p.beginShape();
-            for (let i = 0; i < points.length; i++)
+            for (let i =0 ; i < points.length; i++)
                 p.vertex(points[i].x, points[i].y);
             p.endShape();
+            console.log(points)
+
+            // !! UNCOMMENT THIS AND COMMENT THE ABOVE FOR EPICYCLE DRAWINGS
+            // const v = p.epicycles(p.width / 2, p.height / 2, coeffs.sort((a, b) =>
+            //     b.radius - a.radius));
+            // points.unshift(v);
+
+            // p.stroke(230);
+            // p.beginShape();
+            // for (let i = 0; i < points.length; i++)
+            //     p.vertex(points[i].x, points[i].y);
+            // p.endShape();
 
             if (time > M.pi * 2)
                 points.pop();

@@ -9,7 +9,7 @@ import { DFTData } from '../interfaces/dft-data';
 export class FourierService {
     constructor() { }
 
-    public async dft(cps: M.Complex[], m: number): Promise<DFTData[]> {
+    public async dft(cps: M.Complex[]): Promise<DFTData[]> {
         const X = [];
         const N = cps.length;
         for (let i = 0; i < N; i++) {
