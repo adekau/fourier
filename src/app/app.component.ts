@@ -7,7 +7,6 @@ import { debounceTime } from 'rxjs/operators';
 import { DFTData } from './interfaces/dft-data';
 import { FourierService } from './services/fourier.service';
 
-let pf: ReturnType<AppComponent['parameterize']> = null;
 let coeffs: DFTData[] = [];
 let pts: [number, number][] = null;
 let points = [];
@@ -29,16 +28,16 @@ export class AppComponent implements AfterViewInit {
         {
             name: 'Llama',
             url: './assets/llama.svg',
-            speed: 2,
-            samples: 1024,
-            scalingFactor: 3
+            speed: 1,
+            samples: 400,
+            scalingFactor: 2.5
         },
         {
             name: 'Happy',
             url: './assets/happy.svg',
-            speed: 2,
-            samples: 1024,
-            scalingFactor: 2
+            speed: 1,
+            samples: 400,
+            scalingFactor: 0.8
         }
     ];
 
@@ -71,7 +70,6 @@ export class AppComponent implements AfterViewInit {
     }
 
     private reset() {
-        pf = null;
         coeffs = [];
         points = [];
         this.cdr.detectChanges();
@@ -158,28 +156,28 @@ export class AppComponent implements AfterViewInit {
 
         p.draw = async () => {
             p.background(25);
-            p.translate(300, 200);
-            const pt = await z(time);
-            console.log(await z(M.pi/4));
-            points.unshift(p.createVector(pt.re, pt.im));
-            p.stroke(230);
-            p.noFill();
-            p.beginShape();
-            for (let i =0 ; i < points.length; i++)
-                p.vertex(points[i].x, points[i].y);
-            p.endShape();
-            console.log(points)
-
-            // !! UNCOMMENT THIS AND COMMENT THE ABOVE FOR EPICYCLE DRAWINGS
-            // const v = p.epicycles(p.width / 2, p.height / 2, coeffs.sort((a, b) =>
-            //     b.radius - a.radius));
-            // points.unshift(v);
-
+            // p.translate(300, 200);
+            // const pt = await z(time);
+            // console.log(await z(M.pi/4));
+            // points.unshift(p.createVector(pt.re, pt.im));
             // p.stroke(230);
+            // p.noFill();
             // p.beginShape();
-            // for (let i = 0; i < points.length; i++)
+            // for (let i =0 ; i < points.length; i++)
             //     p.vertex(points[i].x, points[i].y);
             // p.endShape();
+            // console.log(points)
+
+            // !! UNCOMMENT THIS AND COMMENT THE ABOVE FOR EPICYCLE DRAWINGS
+            const v = p.epicycles(p.width / 2, p.height / 2, coeffs.sort((a, b) =>
+                b.radius - a.radius));
+            points.unshift(v);
+
+            p.stroke(230);
+            p.beginShape();
+            for (let i = 0; i < points.length; i++)
+                p.vertex(points[i].x, points[i].y);
+            p.endShape();
 
             if (time > M.pi * 2)
                 points.pop();
