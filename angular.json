@@ -124,7 +124,13 @@
         },
         "deploy": {
           "builder": "angular-cli-ghpages:deploy",
-          "options": {}
+          "options": {
+              "deployUrl": "https://adekau.github.io/fourier/",
+              "baseHref": "fourier",
+              "servePath": "/",
+              "aot": true,
+              "buildOptimizer": true
+          }
         }
       }
     }
