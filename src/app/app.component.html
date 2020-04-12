@@ -1,7 +1,6 @@
 <div class="container">
     <div class="left">
-        <div #canvas></div>
-        <div class="reloading" *ngIf="reloading">Loading</div>
+        <fourier-animate [reloading]="reloading" [pts]="pts" [timing]="timing"></fourier-animate>
     </div>
 
     <div class="right">

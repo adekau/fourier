@@ -1,15 +1,10 @@
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
 import * as M from 'mathjs';
 import * as p5 from 'p5';
 import { fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
-import { DFTData } from './interfaces/dft-data';
 import { FourierService } from './services/fourier.service';
-
-let coeffs: DFTData[] = [];
-let pts: [number, number][] = null;
-let points = [];
 
 @Component({
     selector: 'app-root',
@@ -18,11 +13,20 @@ let points = [];
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent implements AfterViewInit {
-    @ViewChild('canvas', { static: false }) private canvas: ElementRef;
+    public pts: [number, number][] = [];
     public samples = 1024;
     public scalingFactor = 2;
     public reloading = false;
-    public timeFactor = 1;
+
+    private _timeFactor = 1;
+    public get timeFactor() {
+        return this._timeFactor;
+    }
+    public set timeFactor(newval: number) {
+        this._timeFactor = newval;
+        this.timing = ((2 * Math.PI) / this.pts.length) * this._timeFactor;
+    }
+
     public svgUrl = './assets/llama.svg';
     public examples = [
         {
@@ -40,6 +44,7 @@ export class AppComponent implements AfterViewInit {
             scalingFactor: 0.8
         }
     ];
+    public timing: number = 0.04;
 
     private p5: p5;
 
@@ -55,23 +60,19 @@ export class AppComponent implements AfterViewInit {
         const response = await fetch(this.svgUrl);
         const text = await response.text();
 
-        pts = await this.sampleSvgPoints(text, this.samples);
-        const center = M.mean([M.min(pts), M.max(pts)]);
-        pts = pts.map(([x, y]) => [
+        this.pts = await this.sampleSvgPoints(text, this.samples);
+        const center = M.mean([M.min(this.pts), M.max(this.pts)]);
+        this.pts = this.pts.map(([x, y]) => [
             (x - center) * this.scalingFactor,
             (y - center) * this.scalingFactor
         ]);
-        const complexPts = pts.map(pt => this.ptToComplex(pt));
-        coeffs = await this.fourierService.dft(complexPts);
+        this.timing = ((2 * Math.PI) / this.pts.length) * this.timeFactor;
 
         this.reloading = false;
         this.cdr.detectChanges();
-        this.p5 = new p5(this.sketch.bind(this), this.canvas.nativeElement);
     }
 
     private reset() {
-        coeffs = [];
-        points = [];
         this.cdr.detectChanges();
         if (this.p5)
             this.p5.remove();
@@ -79,7 +80,7 @@ export class AppComponent implements AfterViewInit {
     }
 
     public resetScale() {
-        pts = null;
+        this.pts = [];
         this.loadSvg();
     }
 
@@ -118,10 +119,6 @@ export class AppComponent implements AfterViewInit {
         return [pt.x, pt.y];
     }
 
-    private ptToComplex(pt: number[]): M.Complex {
-        return M.complex(`${pt[0]} + ${pt[1]}i`);
-    }
-
     private parameterize(cn: M.Complex[]) {
         return async (t: number): Promise<M.Complex> => this.reloading
             ? M.complex('0')
@@ -143,64 +140,5 @@ export class AppComponent implements AfterViewInit {
         this.samples = example.samples;
         this.timeFactor = example.speed;
         this.loadSvg();
-    }
-
-    private sketch(p: any) {
-        let time = 0;
-        p.setup = () => {
-            p.createCanvas(window.innerWidth - 225, window.innerHeight - 10);
-            p.frameRate(30);
-        };
-
-        const z = this.parameterize(coeffs);
-
-        p.draw = async () => {
-            p.background(25);
-            // p.translate(300, 200);
-            // const pt = await z(time);
-            // console.log(await z(M.pi/4));
-            // points.unshift(p.createVector(pt.re, pt.im));
-            // p.stroke(230);
-            // p.noFill();
-            // p.beginShape();
-            // for (let i =0 ; i < points.length; i++)
-            //     p.vertex(points[i].x, points[i].y);
-            // p.endShape();
-            // console.log(points)
-
-            // !! UNCOMMENT THIS AND COMMENT THE ABOVE FOR EPICYCLE DRAWINGS
-            const v = p.epicycles(p.width / 2, p.height / 2, coeffs.sort((a, b) =>
-                b.radius - a.radius));
-            points.unshift(v);
-
-            p.stroke(230);
-            p.beginShape();
-            for (let i = 0; i < points.length; i++)
-                p.vertex(points[i].x, points[i].y);
-            p.endShape();
-
-            if (time > M.pi * 2)
-                points.pop();
-
-            time += ((2 * M.pi) / pts.length) * this.timeFactor;
-        };
-
-        p.epicycles = (x: number, y: number, complex: DFTData[]) => {
-            for (let i = 0; i < complex.length; i++) {
-                const cn = complex[i];
-                const prevx = x;
-                const prevy = y;
-                const { freq, radius, phase } = cn;
-                x += radius * M.cos(freq * time + phase);
-                y += radius * M.sin(freq * time + phase);
-
-                p.stroke(230, 85);
-                p.noFill();
-                p.ellipse(prevx, prevy, radius * 2);
-                p.stroke(230, 142);
-                p.line(prevx, prevy, x, y);
-            }
-            return p.createVector(x, y);
-        };
     }
 }
